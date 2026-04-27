@@ -18,7 +18,7 @@ def extract_sales_data(file_content):
     sales_data = {
         "CARD": 0, "CASH": 0, "COD": 0, "CREDIT": 0, "MOBI KWIK": 0,"PAYBYLINK": 0,"GIFT VOUCHER":0,
         "PAYTM CARD": 0, "PAYTM DQRC": 0, "QR CODE": 0, "RELIGARE": 0, "UPI": 0, "POS SALES": 0,
-        "TENDER WISE SALES SUMMARY": 0, "CORPORATE CODE WISE SALES SUMMARY": 0
+        "TENDER TYPE SALES": 0, "CORP CODE SALES": 0
     }
     
     def safe_extract(value):
@@ -29,23 +29,23 @@ def extract_sales_data(file_content):
             return 0
     
     for line in lines:
-        # Handle explicit TOTALAMOUNT (no space) -> TENDER WISE SALES SUMMARY
+        # Handle explicit TOTALAMOUNT (no space) -> TENDER TYPE SALES
         if re.search(r"TOTALAMOUNT", line, re.IGNORECASE):
             values = re.findall(r"[-+]?[0-9,]*\.?[0-9]+", line)
             if values:
-                sales_data["TENDER WISE SALES SUMMARY"] = safe_extract(values[-1])
+                sales_data["TENDER TYPE SALES"] = safe_extract(values[-1])
                 continue
 
-        # Handle explicit TOTAL AMOUNT (with space) -> CORPORATE CODE WISE SALES SUMMARY
+        # Handle explicit TOTAL AMOUNT (with space) -> CORP CODE SALES
         if re.search(r"TOTAL\s*AMOUNT", line, re.IGNORECASE):
             values = re.findall(r"[-+]?[0-9,]*\.?[0-9]+", line)
             if values:
-                sales_data["CORPORATE CODE WISE SALES SUMMARY"] = safe_extract(values[-1])
+                sales_data["CORP CODE SALES"] = safe_extract(values[-1])
                 continue
 
         for key in list(sales_data.keys()):
-            # Skip TENDER WISE SALES SUMMARY as handled above
-            if key == "TENDER WISE SALES SUMMARY":
+            # Skip TENDER TYPE SALES as handled above
+            if key == "TENDER TYPE SALES":
                 continue
             pattern = rf"^{re.escape(key)}\b"
             if re.search(pattern, line, re.IGNORECASE):
@@ -58,12 +58,12 @@ def extract_sales_data(file_content):
         if re.search(r"TOTALAMOUNT", line, re.IGNORECASE):
             values = re.findall(r"[-+]?[0-9,]*\.?[0-9]+", line)
             if values:
-                sales_data["TENDER WISE SALES SUMMARY"] = safe_extract(values[-1])
+                sales_data["TENDER TYPE SALES"] = safe_extract(values[-1])
                 break
         if re.search(r"TOTAL\s*AMOUNT", line, re.IGNORECASE):
             values = re.findall(r"[-+]?[0-9,]*\.?[0-9]+", line)
             if values:
-                sales_data["CORPORATE CODE WISE SALES SUMMARY"] = safe_extract(values[-1])
+                sales_data["CORP CODE SALES"] = safe_extract(values[-1])
                 break
     
     return shop_id, shop_name, sales_data
@@ -89,28 +89,28 @@ def convert_to_excel(data_list):
     if "POS SALES" in df.columns:
         df = df.drop(columns=["POS SALES"])
 
-    # Ensure uppercase TENDER WISE SALES SUMMARY and CORPORATE CODE WISE SALES SUMMARY exist
-    if "TENDER WISE SALES SUMMARY" not in df.columns:
-        df["TENDER WISE SALES SUMMARY"] = 0
+    # Ensure uppercase TENDER TYPE SALES and CORP CODE SALES exist
+    if "TENDER TYPE SALES" not in df.columns:
+        df["TENDER TYPE SALES"] = 0
     else:
-        df["TENDER WISE SALES SUMMARY"] = df["TENDER WISE SALES SUMMARY"].fillna(0)
+        df["TENDER TYPE SALES"] = df["TENDER TYPE SALES"].fillna(0)
 
-    if "CORPORATE CODE WISE SALES SUMMARY" not in df.columns:
-        df["CORPORATE CODE WISE SALES SUMMARY"] = 0
+    if "CORP CODE SALES" not in df.columns:
+        df["CORP CODE SALES"] = 0
     else:
-        df["CORPORATE CODE WISE SALES SUMMARY"] = df["CORPORATE CODE WISE SALES SUMMARY"].fillna(0)
+        df["CORP CODE SALES"] = df["CORP CODE SALES"].fillna(0)
 
-    # Reorder columns so TENDER WISE SALES SUMMARY and CORPORATE CODE WISE SALES SUMMARY are the last two columns
+    # Reorder columns so TENDER TYPE SALES and CORP CODE SALES are the last two columns
     cols = list(df.columns)
     # Keep Shop id and Shop Name at the front if present
     front = [c for c in ["Shop id", "Shop Name"] if c in cols]
     # Build working list excluding front columns
     working = [c for c in cols if c not in front]
-    # Remove TENDER WISE SALES SUMMARY and CORPORATE CODE WISE SALES SUMMARY from working so they can be appended at the end
-    for end_col in ["TENDER WISE SALES SUMMARY", "CORPORATE CODE WISE SALES SUMMARY"]:
+    # Remove TENDER TYPE SALES and CORP CODE SALES from working so they can be appended at the end
+    for end_col in ["TENDER TYPE SALES", "CORP CODE SALES"]:
         if end_col in working:
             working.remove(end_col)
-    end_cols = [c for c in ["TENDER WISE SALES SUMMARY", "CORPORATE CODE WISE SALES SUMMARY"] if c in df.columns]
+    end_cols = [c for c in ["TENDER TYPE SALES", "CORP CODE SALES"] if c in df.columns]
     df = df[front + working + end_cols]
 
     file_path = "Sales_Report.xlsx"
